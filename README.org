@@ -1,0 +1,93 @@
+#+TITLE: zlib classifier
+
+This is a toy classifier (not supposed to do well) based on compression.
+Specifically, /nearness/ of data instances to a class are calculated by seeing how
+well the instances compress together with the training instance of that class.
+
+Lets begin with a few basic imports:
+
+#+BEGIN_SRC python :session :exports both :results none
+from zclf import ZlibClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.datasets import load_digits
+#+END_SRC
+
+For working with any dataset, we need to have a mechanism for encoding each
+instance (the ~X~ values) in a string of ~bytes~ so that the compressor can pick it
+up. To make it the classifier very black boxy, lets just encode each ~x~ using its
+string representation.
+
+#+BEGIN_SRC python :session :exports both :results none
+def encoder(x):
+    return str(x).encode("utf-8")
+#+END_SRC
+
+Classification goes like this
+
+#+BEGIN_SRC python :session :exports both :results value
+X = load_digits()["data"]; y = load_digits()["target"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+
+clf = ZlibClassifier(encoder)
+accuracy_score(clf.fit(X_train, y_train).predict(X_test), y_test)
+#+END_SRC
+
+#+RESULTS:
+: 0.436026936027
+
+The internal representation of each class is a concatenated string (bytes) of
+all the training instances belonging to that class. For a single instance, the
+input is a vector like:
+
+#+BEGIN_SRC python :session :exports both :results output
+X_train[0]
+#+END_SRC
+
+#+RESULTS:
+: array([  0.,   0.,   0.,   0.,   5.,  15.,   8.,   0.,   0.,   0.,   0.,
+:          2.,  15.,  16.,   9.,   0.,   0.,   0.,   3.,  15.,  16.,  16.,
+:         10.,   0.,   0.,   7.,  16.,  10.,   8.,  16.,   7.,   0.,   0.,
+:          0.,   1.,   0.,   8.,  16.,   4.,   0.,   0.,   0.,   0.,   0.,
+:         11.,  16.,   1.,   0.,   0.,   0.,   0.,   0.,   9.,  16.,   1.,
+:          0.,   0.,   0.,   0.,   0.,   8.,  14.,   0.,   0.])
+
+Its encoding (first 100 bytes) is:
+#+BEGIN_SRC python :session :exports both :results output
+encoder(X_train[0])[:100]
+#+END_SRC
+
+#+RESULTS:
+: b'[  0.   0.   0.   0.   5.  15.   8.   0.   0.   0.   0.   2.  15.  16.   9.\n   0.   0.   0.   3.  15'
+
+The compressed representation (first 20 bytes) looks something like
+#+BEGIN_SRC python :session :exports both :results output
+import zlib
+zlib.compress(encoder(X_train[0]))[:20]
+#+END_SRC
+
+#+RESULTS:
+: b'x\x9c\x8bVP0\xd0S\xc0 L\x81\x84!\x88P\xb0\xc0"\x0b'
+
+Lets try changing the encoding to one which groups numbers
+
+#+BEGIN_SRC python :session :exports both :results value
+clf = ZlibClassifier(lambda x: str(x // 10).encode("utf-8"))
+accuracy_score(clf.fit(X_train, y_train).predict(X_test), y_test)
+#+END_SRC
+
+#+RESULTS:
+: 0.638047138047
+
+Neat. Lets now make the numbers look like a string of repetitions so that 4 is
+closer to 5.
+
+#+BEGIN_SRC python :session :exports both :results value
+clf = ZlibClassifier(lambda x: ".".join(["a" * int(i // 10) for i in x]).encode("utf-8"))
+accuracy_score(clf.fit(X_train, y_train).predict(X_test), y_test)
+#+END_SRC
+
+#+RESULTS:
+: 0.338383838384
+
+Doesn't work that well.
