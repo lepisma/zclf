@@ -2,7 +2,7 @@
 
 This is a toy classifier (not supposed to do well) based on compression.
 Specifically, /nearness/ of data instances to a class are calculated by seeing how
-well the instances compress together with the training instance of that class.
+well the instances compress together with the training instances of that class.
 
 Lets begin with a few basic imports:
 
@@ -15,7 +15,7 @@ from sklearn.datasets import load_digits
 
 For working with any dataset, we need to have a mechanism for encoding each
 instance (the ~X~ values) in a string of ~bytes~ so that the compressor can pick it
-up. To make it the classifier very black boxy, lets just encode each ~x~ using its
+up. To make the classifier very black boxy, lets just encode each ~x~ using its
 string representation.
 
 #+BEGIN_SRC python :session :exports both :results none
